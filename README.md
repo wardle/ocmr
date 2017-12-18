@@ -65,4 +65,32 @@ Here, a middle-aged male patient presents with chest pain, breathlessness (dyspn
 
 For version 1, each problem simply has an associated SNOMED-CT concept and duration. It is conceivable that additional information could be recorded, even imaging data, with the OCMR acting as a contextual wrapper around that data.
 
+As each problem and the answer references a SNOMED-CT concept, we can use the SNOMED-CT ontology to infer additional information about each problem and the answer. 
 
+For example,
+
+```json
+        "Concept": {
+          "ConceptID": 29857009,
+          "FullySpecifiedName": "Chest pain (finding)",
+          "Status": {
+            "Code": 0,
+            "Title": "Current",
+            "IsActive": true
+          },
+          "Parents": [
+            609623002,      // Finding of upper trunk
+            301366005,      // Pain of truncal structure
+            404684003,      // Clinical finding
+            302292003,      // Finding of trunk structure
+            22253000,       // Pain
+            699697007,      // Finding of sensation by site
+            279001004,      // Pain finding at anatomical site
+            106147001,      // Sensory nervous system finding
+            276435006,      // Pain / sensation finding
+            298705000,      // Finding of region of thorax
+            301857004       // Finding of body region
+          ]
+        },
+```
+Here we can algorithmically determine that the patient is experiencing ~~~~ pain ~~~~ in the ~~~~ trunk ~~~~.
