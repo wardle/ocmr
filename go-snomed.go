@@ -5,11 +5,11 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
+	"github.com/wardle/ocmr/fake"
 	"github.com/wardle/ocmr/snomed"
 	"os"
 
 	_ "github.com/lib/pq"
-	"github.com/wardle/ocmr/mcqs"
 )
 
 // database connection parameters
@@ -50,13 +50,13 @@ func main() {
 		}
 		sct := snomed.NewDatabaseService(db)
 		if truth {
-			mcqs.GenerateFakeTruth(sct, number)
+			fake.GenerateFakeTruth(sct, number)
 		}
 		if prevalence {
-			mcqs.GeneratePrevalence(sct, number)
+			fake.GeneratePrevalence(sct, number)
 		}
 		if diagnostic {
-			mcqs.GenerateDiagnostic(sct)
+			fake.GenerateDiagnostic(sct)
 		}
 	} else {
 		flag.PrintDefaults()

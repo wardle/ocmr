@@ -1,8 +1,9 @@
-package mcqs
+package fake
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/wardle/ocmr/ocmr"
 	"github.com/wardle/ocmr/snomed"
 	"math/rand"
 	"strings"
@@ -35,7 +36,7 @@ func GenerateFakeTruth(db *snomed.DatabaseService, n int) {
 			diagnoses[i] = allDiagnoses[r]
 		}
 	}
-	allTruth := make([]*FakeTruth, 0, len(diagnoses)+1)
+	allTruth := make([]*Truth, 0, len(diagnoses)+1)
 	mi, err := MyocardialInfarctionTruth(db) // always prepend a "real" truth for illustrative purposes
 	checkError(err)
 	allTruth = append(allTruth, mi)
@@ -46,7 +47,7 @@ func GenerateFakeTruth(db *snomed.DatabaseService, n int) {
 		}
 	}
 	prevalence := make(map[snomed.Identifier]float64, 0)
-	questions := make([]*Record, 0)
+	questions := make([]*ocmr.Record, 0)
 	for _, truth := range allTruth {
 		p := 5 + int(calculatePrevalence(db, prevalence, truth.Diagnosis)*10000)*n // we'll impute for this diagnosis based on prevalence
 		for i := 0; i < p; i++ {                                                   // generate number of questions commensurate with prevalence
@@ -59,30 +60,30 @@ func GenerateFakeTruth(db *snomed.DatabaseService, n int) {
 	fmt.Print(string(json))
 }
 
-func generateTruth(db *snomed.DatabaseService, diagnosis *snomed.Concept) (*FakeTruth, bool) {
+func generateTruth(db *snomed.DatabaseService, diagnosis *snomed.Concept) (*Truth, bool) {
 	symptoms, err := relatedBySiteForDiagnosis(db, diagnosis)
 	checkError(err)
 	totalSymptoms := len(symptoms)
 	if totalSymptoms > 0 {
 		numSymptoms := 1 + rand.Intn(min(30, totalSymptoms))
-		problems := make([]*FakeProblem, numSymptoms)
+		problems := make([]*Problem, numSymptoms)
 		parents, err := db.GetAllParents(diagnosis)
 		checkError(err)
 		for i := 0; i < numSymptoms; i++ {
 			symptom := symptoms[rand.Intn(totalSymptoms-1)]
-			problem := &FakeProblem{symptom, randomDuration(), rand.Float64()}
+			problem := &Problem{symptom, randomDuration(), rand.Float64()}
 			problems[i] = problem
 		}
 		meanAge := randomAge()
 		sd := min(meanAge, 20)
-		truth := &FakeTruth{diagnosis, parents, problems, randomSexBias(), meanAge, rand.Intn(sd)}
+		truth := &Truth{diagnosis, parents, problems, randomSexBias(), meanAge, rand.Intn(sd)}
 		return truth, true
 	}
 	return nil, false
 }
 
-func randomDuration() Duration {
-	possible := []Duration{Acute, Subacute, Chronic, Episodic}
+func randomDuration() ocmr.Duration {
+	possible := []ocmr.Duration{ocmr.Acute, ocmr.Subacute, ocmr.Chronic, ocmr.Episodic}
 	return possible[rand.Intn(len(possible)-1)]
 }
 
@@ -97,15 +98,15 @@ func checkError(err error) {
 	}
 }
 
-// FakeTruth is an intermediate transitional data structure used to generate
+// Truth is an intermediate transitional data structure used to generate
 // multiple questions from that same truth. The idea is to have "myocardial infarction"
 // represented by "chest pain" (95%), "breathlessness" (60%), "sweating" (40%), "ECG: ST elevation" (80%)
 // (figures make up) but of course, our data will be fake but at least relatively consistent as questions
 // will be generated from the same "fake truth" but with different combinations of problems.
-type FakeTruth struct {
+type Truth struct {
 	Diagnosis *snomed.Concept
 	Parents   []*snomed.Concept // convenience pointers to parents
-	Problems  []*FakeProblem    // problems for this diagnosis
+	Problems  []*Problem        // problems for this diagnosis
 	SexBias   SexBias           // does this disorder have a sex bias?
 	MeanAge   int               // mean age
 	StdDevAge int               // standard deviation for age for this disorder
@@ -122,17 +123,17 @@ const (
 )
 
 // RandomSex generates a random sex based on bias.
-func (sb SexBias) RandomSex() Sex {
+func (sb SexBias) RandomSex() ocmr.Sex {
 	switch {
 	case sb == MenOnly:
-		return Male
+		return ocmr.Male
 	case sb == FemaleOnly:
-		return Female
+		return ocmr.Female
 	default:
 		if rand.Float32() >= 0.5 {
-			return Male
+			return ocmr.Male
 		}
-		return Female
+		return ocmr.Female
 	}
 }
 
@@ -143,7 +144,7 @@ func randomAge() int {
 	return rand.Intn(20)
 }
 
-func (ft FakeTruth) String() string {
+func (ft Truth) String() string {
 	problems := make([]string, 0)
 	for _, problem := range ft.Problems {
 		problems = append(problems, problem.String())
@@ -152,8 +153,8 @@ func (ft FakeTruth) String() string {
 }
 
 // ToQuestion creates a fake question from a fake truth by choosing a random selection of the symptoms on offer.
-func (ft FakeTruth) ToQuestion(db *snomed.DatabaseService) *Record {
-	findings := make([]*ClinicalFinding, 0)
+func (ft Truth) ToQuestion(db *snomed.DatabaseService) *ocmr.Record {
+	findings := make([]*ocmr.ClinicalFinding, 0)
 	for _, problem := range ft.Problems {
 		if problem.Probability > rand.Float64() {
 			findings = append(findings, problem.ToFinding(db))
@@ -169,26 +170,26 @@ func (ft FakeTruth) ToQuestion(db *snomed.DatabaseService) *Record {
 	sex := ft.SexBias.RandomSex()
 	parents, err := db.GetAllParents(ft.Diagnosis)
 	checkError(err)
-	return &Record{Age: age, Sex: sex, Findings: findings, Answer: ft.Diagnosis, Parents: parents}
+	return &ocmr.Record{Age: age, Sex: sex, Findings: findings, Answer: ft.Diagnosis, Parents: parents}
 }
 
-// FakeProblem records a clinical finding or observation and its probability
+// Problem records a clinical finding or observation and its probability
 // for an owning Diagnosis.
-type FakeProblem struct {
+type Problem struct {
 	Problem     *snomed.Concept // problem
-	Duration    Duration        // duration
+	Duration    ocmr.Duration   // duration
 	Probability float64         // probability of this problem for this condition
 }
 
-func (fp FakeProblem) String() string {
+func (fp Problem) String() string {
 	return fmt.Sprintf("%s (%f%%)", fp.Problem.FullySpecifiedName, fp.Probability)
 }
 
 // ToFinding turns a fake problem from a fake truth into a clinical finding
-func (fp FakeProblem) ToFinding(db *snomed.DatabaseService) *ClinicalFinding {
+func (fp Problem) ToFinding(db *snomed.DatabaseService) *ocmr.ClinicalFinding {
 	parents, err := db.GetAllParents(fp.Problem)
 	checkError(err)
-	return &ClinicalFinding{fp.Problem, parents, fp.Duration}
+	return &ocmr.ClinicalFinding{Concept: fp.Problem, Parents: parents, Duration: fp.Duration}
 }
 
 // convenience structure to allow literal defined truth for demonstration purposes.
@@ -202,17 +203,17 @@ type explicitTruth struct {
 // convenience structure to allow literal defined problem for demonstration purposes.
 type explicitProblem struct {
 	conceptID   snomed.Identifier
-	duration    Duration
+	duration    ocmr.Duration
 	probability float64
 }
 
 // toFakeTruth converts a (usually literal defined) explicit truth into a fake truth
-func (et explicitTruth) toFakeTruth(db *snomed.DatabaseService) (*FakeTruth, error) {
+func (et explicitTruth) toFakeTruth(db *snomed.DatabaseService) (*Truth, error) {
 	diagnosis, err := db.FetchConcept(int(et.diagnosis))
 	if err != nil {
 		return nil, err
 	}
-	problems := make([]*FakeProblem, 0, len(et.problems))
+	problems := make([]*Problem, 0, len(et.problems))
 	for _, p := range et.problems {
 		fp, err := p.toFakeProblem(db)
 		if err != nil {
@@ -224,29 +225,29 @@ func (et explicitTruth) toFakeTruth(db *snomed.DatabaseService) (*FakeTruth, err
 	if err != nil {
 		return nil, err
 	}
-	return &FakeTruth{diagnosis, parents, problems, NoSexBias, et.meanAge, et.stdDevAge}, nil
+	return &Truth{diagnosis, parents, problems, NoSexBias, et.meanAge, et.stdDevAge}, nil
 }
 
 // toFakeProblem converts a (usually literal defined) explicit problem into a fake problem
-func (ep explicitProblem) toFakeProblem(db *snomed.DatabaseService) (*FakeProblem, error) {
+func (ep explicitProblem) toFakeProblem(db *snomed.DatabaseService) (*Problem, error) {
 	concept, err := db.FetchConcept(int(ep.conceptID))
 	if err != nil {
 		return nil, err
 	}
-	return &FakeProblem{concept, ep.duration, ep.probability}, nil
+	return &Problem{concept, ep.duration, ep.probability}, nil
 }
 
 var myocardialInfarction = &explicitTruth{22298006,
 	[]*explicitProblem{
-		&explicitProblem{29857009, Acute, 0.95},  // chest pain
-		&explicitProblem{267036007, Acute, 0.70}, // breathlessness
-		&explicitProblem{415690000, Acute, 0.80}, // sweating
-		&explicitProblem{426555006, Acute, 0.55}, // paint ot jaw
-		&explicitProblem{76388001, Acute, 0.60},  // ST elevation on ECG - this will inherently say "ECG abnormal"
+		&explicitProblem{29857009, ocmr.Acute, 0.95},  // chest pain
+		&explicitProblem{267036007, ocmr.Acute, 0.70}, // breathlessness
+		&explicitProblem{415690000, ocmr.Acute, 0.80}, // sweating
+		&explicitProblem{426555006, ocmr.Acute, 0.55}, // paint ot jaw
+		&explicitProblem{76388001, ocmr.Acute, 0.60},  // ST elevation on ECG - this will inherently say "ECG abnormal"
 	}, 60, 20}
 
 // MyocardialInfarctionTruth generates a truth for myocardial infarction for demonstration and testing purposes.
-func MyocardialInfarctionTruth(db *snomed.DatabaseService) (*FakeTruth, error) {
+func MyocardialInfarctionTruth(db *snomed.DatabaseService) (*Truth, error) {
 	return myocardialInfarction.toFakeTruth(db)
 }
 

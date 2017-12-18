@@ -1,4 +1,4 @@
-package mcqs
+package fake
 
 import (
 	"github.com/wardle/ocmr/snomed"

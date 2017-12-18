@@ -1,4 +1,4 @@
-package mcqs
+package ocmr
 
 import (
 	"encoding/json"

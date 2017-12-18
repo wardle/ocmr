@@ -1,4 +1,4 @@
-package mcqs
+package fake
 
 import (
 	"database/sql"
