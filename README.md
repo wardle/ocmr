@@ -11,6 +11,10 @@ It is designed as a data structure:
 * as an intermediary data structure created from electronic health records to encapsulate a clinical scenario to be passed to an algorithm for processing.
 
 
+It bears a close resemblance to a multiple-choice question designed for undergraduate and postgraduate exams. This should be not surprising as exam questions must distil appropriate clinical information into a concise form. 
+
+Assessments drive learning in humans. They should do the same for algorithms.
+
 ## Example v1
 
 ```json
@@ -94,3 +98,5 @@ For example,
         },
 ```
 Here we can algorithmically determine that the patient is experiencing `pain` in the `trunk`.
+
+For more information, please see my recent [blog post](https://wardle.org/machine-learning/2017/12/17/diagnostic-inference.html)
