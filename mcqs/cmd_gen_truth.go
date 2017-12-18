@@ -46,7 +46,7 @@ func GenerateFakeTruth(db *snomed.DatabaseService, n int) {
 		}
 	}
 	prevalence := make(map[snomed.Identifier]float64, 0)
-	questions := make([]*Question, 0)
+	questions := make([]*Record, 0)
 	for _, truth := range allTruth {
 		p := 5 + int(calculatePrevalence(db, prevalence, truth.Diagnosis)*10000)*n // we'll impute for this diagnosis based on prevalence
 		for i := 0; i < p; i++ {                                                   // generate number of questions commensurate with prevalence
@@ -152,7 +152,7 @@ func (ft FakeTruth) String() string {
 }
 
 // ToQuestion creates a fake question from a fake truth by choosing a random selection of the symptoms on offer.
-func (ft FakeTruth) ToQuestion(db *snomed.DatabaseService) *Question {
+func (ft FakeTruth) ToQuestion(db *snomed.DatabaseService) *Record {
 	findings := make([]*ClinicalFinding, 0)
 	for _, problem := range ft.Problems {
 		if problem.Probability > rand.Float64() {
@@ -169,8 +169,7 @@ func (ft FakeTruth) ToQuestion(db *snomed.DatabaseService) *Question {
 	sex := ft.SexBias.RandomSex()
 	parents, err := db.GetAllParents(ft.Diagnosis)
 	checkError(err)
-	return &Question{Age: age, Sex: sex, Findings: findings, LeadIn: WhatIsDiagnosis,
-		PossibleAnswers: nil, CorrectAnswer: ft.Diagnosis, Parents: parents}
+	return &Record{Age: age, Sex: sex, Findings: findings, Answer: ft.Diagnosis, Parents: parents}
 }
 
 // FakeProblem records a clinical finding or observation and its probability
