@@ -93,4 +93,4 @@ For example,
           ]
         },
 ```
-Here we can algorithmically determine that the patient is experiencing ~~~~ pain ~~~~ in the ~~~~ trunk ~~~~.
+Here we can algorithmically determine that the patient is experiencing `pain` in the `trunk`.
