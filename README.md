@@ -99,4 +99,8 @@ For example,
 ```
 Here we can algorithmically determine that the patient is experiencing `pain` in the `trunk`.
 
-For more information, please see my recent [blog post](https://wardle.org/machine-learning/2017/12/17/diagnostic-inference.html)
+For more information, please see my recent [blog post](https://wardle.org/machine-learning/2017/12/17/diagnostic-inference.html).
+
+An early version of this project is available at [https://bitbucket.org/wardle/go-snomed](https://bitbucket.org/wardle/go-snomed) - I will be migrating the code across with a focus on defining the OCMR v1 structures in the coming days.
+
+*Mark*
